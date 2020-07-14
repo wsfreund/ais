@@ -14,3 +14,14 @@ the original theano implementation.
 
 *The code was validated (same results = up to 5 digits precision) with respect to
 the original implementation.* 
+
+
+# License and warranty
+
+© 2020 WTFPL – Do What the Fuck You Want to Public License.
+
+This work is free. It comes without any warranty, to the
+extent permitted by applicable law. You can redistribute it 
+and/or modify it under the terms of the Do What The Fuck You Want To 
+Public License, Version 2, as published by Sam Hocevar. 
+See http://www.wtfpl.net/ for more details.
