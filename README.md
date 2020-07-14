@@ -13,4 +13,4 @@ missing components should be trivial, however, by extending current code with
 the original theano implementation.
 
 *The code was validated (same results = up to 5 digits precision) with respect to
-original implementation.* 
+the original implementation.* 
