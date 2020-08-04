@@ -1,4 +1,4 @@
-# Annelead Importance Sampling (AIS)
+# Anneled Importance Sampling (AIS)
 
 This repository contains a tensorflow 2 re-implementation of the AIS algorithm
 as employed in paper [On the Quantitative Analysis of Decoder-Based Generative
