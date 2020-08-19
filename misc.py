@@ -7,10 +7,10 @@ class NotSetType( type ):
   def __str__(self):
     return "<+NotSet+>"
 
-class NotSet( object ): 
+class NotSet( object, metaclass = NotSetType ): 
   """As None, but can be used with retrieve_kw to have a unique default value
   through all job hierarchy."""
-  __metaclass__ = NotSetType
+  pass
 
 def retrieve_kw( kw, key, default = NotSet ):
   """
