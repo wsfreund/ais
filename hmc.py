@@ -2,7 +2,7 @@ import tensorflow as tf
 
 from .misc import *
 
-class MCMC(Iterable):
+class MCMC(object):
   pass
 
 class HMC(MCMC):
@@ -32,6 +32,11 @@ class HMC(MCMC):
     # Variables needed at compile time for all tf.functions
     self._v_stepsize              = tf.Variable(0, dtype=tf.float32)
     self._v_avg_acceptance_rate   = tf.Variable(0, dtype=tf.float32)
+
+  def reset(self):
+    # reset or initialize iterative properties
+    self._v_stepsize.assign( self._stepsize )
+    self._v_avg_acceptance_rate.assign( self._target_acceptance_rate )
 
   @tf.function
   def update(self, initial_pos):
@@ -68,6 +73,29 @@ class HMC(MCMC):
     return accept, final_pos, final_vel
 
   @tf.function
+  def _dynamics_leapfrog(self, pos, vel, i):
+    dE_dpos = self._energy_grad(pos)
+    new_vel = tf.subtract(vel, tf.multiply( self._v_stepsize, dE_dpos ) )
+    new_pos = tf.add(pos, tf.multiply(self._v_stepsize, new_vel ) )
+    return [new_pos, new_vel, tf.add(i, 1)]
+
+  def _dynamics_condition(self, pos, vel, i):
+    return tf.less(i, self._n_steps)
+
+  @tf.function
+  def _simulate_dynamics(self, initial_pos, initial_vel):
+    dE_dpos = self._energy_grad(initial_pos)
+    vel_half_step = tf.subtract(initial_vel, tf.multiply( tf.multiply(0.5, self._v_stepsize), dE_dpos ) )
+    pos_full_step = tf.add(initial_pos, tf.multiply( self._v_stepsize, vel_half_step ) )
+    i = tf.constant(0)
+    final_pos, new_vel, _ = tf.while_loop( self._dynamics_condition
+                                         , self._dynamics_leapfrog
+                                         , [pos_full_step, vel_half_step, i])
+    dE_dpos = self._energy_grad(final_pos)
+    final_vel = tf.subtract( new_vel, tf.multiply(0.5, tf.multiply( self._v_stepsize, dE_dpos ) ) )
+    return final_pos, final_vel
+
+  @tf.function
   def _hamiltonian(self, p, v):
     return tf.add(self._energy_fn(p), self._kinetic_energy(v))
 
@@ -93,31 +121,3 @@ class HMC(MCMC):
       total_energy = tf.reduce_sum(energy)
       dE_dpos = energy_tape.gradient(total_energy, pos)
     return dE_dpos
-
-  @tf.function
-  def _dynamics_leapfrog(self, pos, vel, i):
-    dE_dpos = self._energy_grad(pos)
-    new_vel = tf.subtract(vel, tf.multiply( self._v_stepsize, dE_dpos ) )
-    new_pos = tf.add(pos, tf.multiply(self._v_stepsize, new_vel ) )
-    return [new_pos, new_vel, tf.add(i, 1)]
-
-  def _dynamics_condition(self, pos, vel, i):
-    return tf.less(i, self._n_steps)
-
-  @tf.function
-  def _simulate_dynamics(self, initial_pos, initial_vel):
-    dE_dpos = self._energy_grad(initial_pos)
-    vel_half_step = tf.subtract(initial_vel, tf.multiply( tf.multiply(0.5, self._v_stepsize), dE_dpos ) )
-    pos_full_step = tf.add(initial_pos, tf.multiply( self._v_stepsize, vel_half_step ) )
-    i = tf.constant(0)
-    final_pos, new_vel, _ = tf.while_loop( self._dynamics_condition
-                                         , self._dynamics_leapfrog
-                                         , [pos_full_step, vel_half_step, i])
-    dE_dpos = self._energy_grad(final_pos)
-    final_vel = tf.subtract( new_vel, tf.multiply(0.5, tf.multiply( self._v_stepsize, dE_dpos ) ) )
-    return final_pos, final_vel
-
-  def __enter__(self):
-    # reset or initialize iterative properties
-    self._v_stepsize.assign( self._stepsize )
-    self._v_avg_acceptance_rate.assign( self._target_acceptance_rate )

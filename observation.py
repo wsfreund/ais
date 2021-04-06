@@ -32,12 +32,13 @@ class GaussianObservationModel(ObservationModel):
   """
   Computes p(x|z) employing the Gaussian assumption, i.e.
 
-  p(x|z) = p_(x;G(z),sigma) = N(x;xprime,sigma)
+  p(x|z) = p_(x;G(z),var) = N(x;xprime,var)
   """
 
-  def __init__(self, sigma):
-    self._sigma = tf.constant( sigma, tf.float32 )
-    self._k     = tf.constant( -(np.log(self._sigma) + np.log(2.0*np.pi))/2, tf.float32 )
+  def __init__(self, var, axis = [-2, -1]):
+    self.var    = tf.constant( var, tf.float32 )
+    self._k     = tf.constant( -(np.log(self.var) + np.log(2.0*np.pi))/2, tf.float32 )
+    self.axis   = axis
 
   @tf.function
   def __call__(self, x, xprime):
@@ -57,9 +58,9 @@ class GaussianObservationModel(ObservationModel):
     """
     term = self._expand_subtract(x,xprime) # nchains, num_samples_data, output_dim1, output_dim2
     # squared norm2 of diff
-    term = math.reduce_sum(math.square(term),axis=(-1,-2,)) # nchains, num_samples_data
-    # scale inner term by sigma
-    term = math.divide(term,self._sigma) # nchains, num_samples_data
+    term = math.reduce_sum(math.square(term),axis=self.axis) # nchains, num_samples_data
+    # scale inner term by var
+    term = math.divide(term,self.var) # nchains, num_samples_data
     # scale inner term by 1/2
     return math.multiply(-0.5, term) # nchains, num_samples_data
 
